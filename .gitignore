@@ -2,6 +2,7 @@
 /dist
 /node_modules
 /build
+/dev-docs/
 
 # Logs
 logs
@@ -50,6 +51,9 @@ lerna-debug.log*
 pids
 *.pid
 *.seed
+!src/database/seeds/
+!src/database/seeds/**/
+!src/database/seeds/**/*.ts
 *.pid.lock
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
