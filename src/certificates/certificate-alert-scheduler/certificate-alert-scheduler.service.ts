@@ -4,6 +4,8 @@ import { CertificateAlertsService } from '../certificate-alerts/certificate-aler
 
 @Injectable()
 export class CertificateAlertSchedulerService {
+  private activeRun: ReturnType<CertificateAlertsService['run']> | null = null;
+
   constructor(private readonly alerts: CertificateAlertsService) {}
 
   @Cron(process.env.ALERT_CRON ?? '0 0 2 * * *', {
@@ -11,6 +13,10 @@ export class CertificateAlertSchedulerService {
     timeZone: 'UTC',
   })
   runDaily() {
-    return this.alerts.run();
+    if (this.activeRun) return this.activeRun;
+    this.activeRun = this.alerts.run().finally(() => {
+      this.activeRun = null;
+    });
+    return this.activeRun;
   }
 }

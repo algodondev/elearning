@@ -63,6 +63,16 @@ export class AttemptsService {
         throw new ForbiddenException(
           'Employees may only submit their own attempts.',
         );
+      const existingCount = await manager
+        .getRepository(AssessmentAttemptEntity)
+        .countBy({ enrollmentId });
+      if (existingCount >= 3) {
+        throw new ConflictException({
+          code: 'ASSESSMENT_ATTEMPTS_EXHAUSTED',
+          message:
+            'The enrollment requires re-enrollment before another attempt.',
+        });
+      }
       const missing = (enrollment.moduleProgress ?? [])
         .filter(
           (progress) =>
@@ -81,16 +91,6 @@ export class AttemptsService {
         });
       }
 
-      const existingCount = await manager
-        .getRepository(AssessmentAttemptEntity)
-        .countBy({ enrollmentId });
-      if (existingCount >= 3) {
-        throw new ConflictException({
-          code: 'ASSESSMENT_ATTEMPTS_EXHAUSTED',
-          message:
-            'The enrollment requires re-enrollment before another attempt.',
-        });
-      }
       const assessment = await manager.getRepository(AssessmentEntity).findOne({
         where: {
           courseId: enrollment.courseId,

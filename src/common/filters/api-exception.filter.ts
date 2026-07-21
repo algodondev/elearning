@@ -88,6 +88,16 @@ export class ApiExceptionFilter implements ExceptionFilter {
         message: 'The data violates a business constraint.',
         driverCode,
       },
+      '40001': {
+        code: 'CONCURRENT_MODIFICATION',
+        message: 'The resource changed concurrently; retry the operation.',
+        driverCode,
+      },
+      '40P01': {
+        code: 'CONCURRENT_MODIFICATION',
+        message: 'The resource changed concurrently; retry the operation.',
+        driverCode,
+      },
     }[driverCode];
   }
 
