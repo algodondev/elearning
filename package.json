@@ -1,6 +1,6 @@
 {
   "name": "elearning",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Corporate e-learning REST API for courses, assessments, certifications and compliance",
   "author": "ESEN",
   "private": true,
