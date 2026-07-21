@@ -1,0 +1,88 @@
+name: API acceptance
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      API_PREFIX: api/v1
+      CORS_ORIGINS: http://localhost:3000
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: elearning_test
+      DB_USER: elearning
+      DB_PASSWORD: elearning_ci_password
+      DB_LOGGING: 'false'
+      JWT_SECRET: ci-only-elearning-jwt-secret-at-least-32-characters
+      JWT_EXPIRES_IN: 15m
+      BCRYPT_ROUNDS: 4
+      THROTTLE_TTL_MS: 60000
+      THROTTLE_LIMIT: 1000
+      ALERT_CRON: 0 0 2 * * *
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: elearning_test
+          POSTGRES_USER: elearning
+          POSTGRES_PASSWORD: elearning_ci_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U elearning -d elearning_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run migration:run
+      - run: npm run format:check
+      - run: npm run lint:check
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:e2e
+      - run: npm run test:cov
+      - run: npm run openapi:generate
+      - run: git diff --exit-code -- docs/api/openapi.json
+      - run: npm run openapi:test
+      - run: npm audit --audit-level=high
+
+      - name: Seed and start API
+        run: |
+          npm run seed
+          node dist/main.js > /tmp/elearning-api.log 2>&1 &
+          for attempt in {1..30}; do
+            curl --fail --silent http://localhost:3000/api/v1/health && exit 0
+            sleep 1
+          done
+          cat /tmp/elearning-api.log
+          exit 1
+
+      - name: Newman acceptance
+        run: >-
+          docker run --rm --network host
+          -v "$GITHUB_WORKSPACE/postman:/etc/newman:ro"
+          postman/newman:alpine
+          run corporate-elearning.postman_collection.json
+          --environment local.postman_environment.json
+          --env-var baseUrl=http://127.0.0.1:3000/api/v1
+          --bail
+
+      - name: Show API logs after failure
+        if: failure()
+        run: cat /tmp/elearning-api.log || true

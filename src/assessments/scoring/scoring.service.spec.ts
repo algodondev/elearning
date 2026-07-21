@@ -104,4 +104,37 @@ describe('ScoringService', () => {
       BadRequestException,
     );
   });
+
+  it.each([
+    ['an empty assessment', [], 70],
+    ['a zero passing threshold', questions, 0],
+    ['a passing threshold over 100', questions, 101],
+  ])('rejects %s', (_label, scorableQuestions, threshold) => {
+    expect(() => service.score(scorableQuestions, [], threshold)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('rejects multiple selections for a single-choice question', () => {
+    expect(() =>
+      service.score(
+        questions,
+        [
+          { questionId: 'single', selectedOptionIds: ['s1', 's2'] },
+          { questionId: 'multiple', selectedOptionIds: ['m1', 'm2'] },
+        ],
+        70,
+      ),
+    ).toThrow(BadRequestException);
+  });
+
+  it('rejects an assessment whose total points are not positive', () => {
+    expect(() =>
+      service.score(
+        [{ ...questions[0], points: 0 }],
+        [{ questionId: 'single', selectedOptionIds: ['s1'] }],
+        70,
+      ),
+    ).toThrow(BadRequestException);
+  });
 });

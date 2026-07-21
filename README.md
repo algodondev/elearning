@@ -1,98 +1,186 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Corporate E-Learning API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS 11 REST API for corporate training administration: employees, organizational catalogs, courses, ordered learning content, assessments, enrollments, sequential learning paths, certificates, expiry alerts, and compliance reporting.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+The API implements JWT authentication, role/ownership authorization, DTO validation, PostgreSQL transactions and constraints, generated Swagger/OpenAPI documentation, real-database E2E tests, and an executable Postman acceptance flow.
 
-## Description
+## Technology
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- Node.js 24 and TypeScript
+- NestJS 11 with the standard CLI/module/controller/service conventions
+- PostgreSQL 17 and TypeORM migrations (`synchronize` is disabled)
+- Passport JWT, bcrypt, RBAC, ownership checks, and request throttling
+- Jest, Supertest, Swagger/OpenAPI, Postman/Newman, and Docker Compose
 
-## Project setup
+## Quick start: API on the host, PostgreSQL in Docker
+
+Requirements: Node.js 24+, npm 11+, Docker Engine/Desktop, and Docker Compose.
 
 ```bash
-$ npm install
+cp .env.example .env
+docker compose up -d postgres
+npm ci
+npm run migration:run
+npm run seed
+npm run start:dev
 ```
 
-## Compile and run the project
+The checked-in `.env.example` is safe to copy. The local `.env` is intentionally ignored by Git. Set `DB_PORT=5433` when running the API from the host, as shown in the example file.
+
+## Fully Dockerized API
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cp .env.example .env
+docker compose up -d --build
+docker compose run --rm -e NODE_ENV=development api \
+  node dist/database/seeds/development.seed/development.seed.js
+docker compose ps
 ```
 
-## Run tests
+The API image is multi-stage and runs with production dependencies only. PostgreSQL data uses a named volume. To stop containers without deleting data:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+docker compose down
 ```
 
-## Deployment
+## URLs
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+- API base: `http://localhost:3000/api/v1`
+- Swagger UI: `http://localhost:3000/api`
+- OpenAPI JSON: `http://localhost:3000/api-json`
+- Health/readiness: `http://localhost:3000/api/v1/health`
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+The generated submission contract is [docs/api/openapi.json](docs/api/openapi.json).
+
+## Development seed
+
+`npm run seed` is destructive by design: it truncates application data, preserves migrations, and is blocked when `NODE_ENV=production`. It is repeatable and creates:
+
+| Role       | Email                     | Development password |
+| ---------- | ------------------------- | -------------------- |
+| ADMIN      | `admin@elearning.local`   | `DevOnly123!`        |
+| HR_MANAGER | `hr@elearning.local`      | `DevOnly123!`        |
+| EMPLOYEE   | `learner@elearning.local` | `DevOnly123!`        |
+
+It also creates two areas/levels, an active learner, a complete mandatory published course and assessment, and a published learning path. These credentials are for local evaluation only.
+
+## Database workflow
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm run migration:run
+npm run migration:revert
+npm run migration:generate
+npm run seed
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Migrations enforce foreign-key delete policies, positive-value checks, ordered-child uniqueness, case-insensitive catalog/account uniqueness, one published assessment per course, one active employee/course enrollment, paired learning-path context, attempt numbers 1–3, and exactly-once certificates/alerts.
 
-## Resources
+Never enable TypeORM schema synchronization. Create schema changes as migrations and prove them against an empty database.
 
-Check out a few resources that may come in handy when working with NestJS:
+## Tests and quality gates
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+The E2E suites truncate application tables. Run them only against a disposable development/test database, then rerun `npm run seed` if you want the demo fixture restored.
 
-## Support
+```bash
+npm run format:check
+npm run lint:check
+npm run build
+npm test
+npm run test:e2e
+npm run test:cov
+npm run openapi:generate
+npm run openapi:test
+npm audit --audit-level=high
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+See [docs/testing.md](docs/testing.md) for the test layers, business-case matrix, and acceptance sequence.
 
-## Stay in touch
+The large compliance fixture, guarded benchmark command, query-plan evidence, and measured p95 are documented in [docs/report-performance.md](docs/report-performance.md). Run the benchmark only with a disposable database whose name ends in `_performance`:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+```bash
+DB_NAME=elearning_performance npm run report:benchmark
+```
 
-## License
+## Postman/Newman acceptance
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+The collection is [postman/corporate-elearning.postman_collection.json](postman/corporate-elearning.postman_collection.json), with a secret-free local environment template at [postman/local.postman_environment.json](postman/local.postman_environment.json).
+
+For Docker Newman:
+
+```bash
+npm run seed
+docker compose up -d --build api
+npm run postman:test
+```
+
+For the Postman desktop app, import both files and keep `baseUrl=http://localhost:3000/api/v1`. The collection obtains JWTs itself and uses a unique run identifier. Reseed before each full collection run.
+
+The seven folders cover readiness/login, organization and employee creation, course/assessment authoring, locked/unlocked learning paths, module gating and certification, three failures plus re-enrollment, alerts/compliance, RBAC, and DTO whitelist validation.
+
+## API conventions
+
+- Routes are versioned under `/api/v1`.
+- All protected requests use `Authorization: Bearer <JWT>`.
+- `ADMIN` and `HR_MANAGER` manage catalogs and learning assignments.
+- `EMPLOYEE` access is restricted to owned progress, attempts, certificates, alerts, and path assignments.
+- Collection responses use `data` and `meta` with `page`, `limit`, `totalItems`, and `totalPages`.
+- Dates and certificate/report boundaries are UTC.
+- Request DTOs reject unknown properties.
+- Every response includes `X-Request-Id`; clients may send their own value.
+
+Errors use a stable safe envelope:
+
+```json
+{
+  "statusCode": 409,
+  "code": "LEARNING_PATH_PREREQUISITE_NOT_PASSED",
+  "message": "The immediately previous course must be passed first.",
+  "details": {
+    "previousCourseId": "550e8400-e29b-41d4-a716-446655440000"
+  },
+  "path": "/api/v1/learning-path-enrollments/.../enroll",
+  "requestId": "a request UUID",
+  "timestamp": "2026-07-20T14:30:00.000Z"
+}
+```
+
+SQL, stack traces, password hashes, JWT secrets, and employee-facing answer correctness are never returned.
+
+## Core business rules
+
+- Required modules must be complete before an assessment attempt.
+- Each enrollment permits at most three attempts. The third failure changes it to `REENROLLMENT_REQUIRED`; a new linked enrollment resets module progress.
+- Scoring uses exact option-set matching and awards no partial credit.
+- Passing atomically issues one certificate and can complete a learning-path assignment.
+- The first path course is unlocked. Every later course needs a historical `PASSED` enrollment for the immediately previous course.
+- Certificate state is derived at an `asOf` instant: exact expiry is expired; exact 30 days is expiring soon.
+- Alert generation is idempotent by certificate and alert type.
+- Compliance counts active employees against mandatory published courses and counts an employee/course only once even with certificate history.
+
+The required route diagram and state explanation are in [docs/learning-path.md](docs/learning-path.md).
+
+## Important environment variables
+
+| Variable                            | Purpose                                | Local default/example       |
+| ----------------------------------- | -------------------------------------- | --------------------------- |
+| `PORT`                              | HTTP port                              | `3000`                      |
+| `API_PREFIX`                        | Versioned route prefix                 | `api/v1`                    |
+| `CORS_ORIGINS`                      | Comma-separated allowlist              | localhost UI origins        |
+| `DB_HOST`, `DB_PORT`                | PostgreSQL connection                  | `localhost`, `5433`         |
+| `DB_NAME`, `DB_USER`, `DB_PASSWORD` | PostgreSQL database credentials        | local development values    |
+| `JWT_SECRET`                        | JWT signing key, minimum 32 characters | replace outside development |
+| `JWT_EXPIRES_IN`                    | Access-token lifetime                  | `15m`                       |
+| `BCRYPT_ROUNDS`                     | Password hashing cost                  | `12`                        |
+| `THROTTLE_TTL_MS`, `THROTTLE_LIMIT` | Global request rate window/limit       | `60000`, `100`              |
+| `ALERT_CRON`                        | Daily UTC certificate-alert cron       | `0 0 2 * * *`               |
+
+Configuration is validated at startup; missing database credentials or a short JWT secret fail fast.
+
+## Project documentation
+
+- [OpenAPI contract](docs/api/openapi.json)
+- [Learning-path diagram](docs/learning-path.md)
+- [Testing and acceptance](docs/testing.md)
+- [Compliance report performance](docs/report-performance.md)
+- [Rubric submission checklist](docs/submission-checklist.md)
+- [Postman collection](postman/corporate-elearning.postman_collection.json)

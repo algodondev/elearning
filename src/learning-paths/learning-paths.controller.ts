@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -79,6 +80,7 @@ export class LearningPathsController {
   }
 
   @Delete(':learningPathId')
+  @HttpCode(204)
   @Roles(UserRole.ADMIN, UserRole.HR_MANAGER)
   @ApiOperation({
     summary: 'Archive an unused learning path',
@@ -116,6 +118,7 @@ export class LearningPathsController {
   }
 
   @Delete(':learningPathId/courses/:courseId')
+  @HttpCode(204)
   @Roles(UserRole.ADMIN, UserRole.HR_MANAGER)
   @ApiOperation({
     summary: 'Remove a course before first assignment',

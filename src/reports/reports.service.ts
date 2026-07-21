@@ -31,6 +31,54 @@ interface DetailRow {
   total_rows: number | string;
 }
 
+export const COMPLIANCE_SUMMARY_SQL = `
+  WITH employee_course AS (
+    SELECT
+      area.id AS area_id,
+      area.name AS area_name,
+      course.id AS course_id,
+      course.code AS course_code,
+      course.title AS course_title,
+      employee.id AS employee_id,
+      COALESCE(certificate_state.has_valid, FALSE) AS has_valid,
+      COALESCE(certificate_state.has_expired, FALSE) AS has_expired
+    FROM areas area
+    CROSS JOIN courses course
+    LEFT JOIN employees employee
+      ON employee.area_id = area.id
+     AND employee.is_active = TRUE
+    LEFT JOIN LATERAL (
+      SELECT
+        BOOL_OR(certificate.expires_at > $1::timestamptz) AS has_valid,
+        BOOL_OR(certificate.expires_at <= $1::timestamptz) AS has_expired
+      FROM certificates certificate
+      WHERE certificate.employee_id = employee.id
+        AND certificate.course_id = course.id
+    ) certificate_state ON employee.id IS NOT NULL
+    WHERE area.is_active = TRUE
+      AND course.is_mandatory = TRUE
+      AND course.status = 'PUBLISHED'
+      AND ($2::uuid IS NULL OR course.id = $2::uuid)
+  ), aggregated AS (
+    SELECT
+      area_id,
+      area_name,
+      course_id,
+      course_code,
+      course_title,
+      COUNT(employee_id)::int AS applicable_active_employees,
+      COUNT(employee_id) FILTER (WHERE has_valid)::int AS valid_certificate_employees,
+      COUNT(employee_id) FILTER (WHERE NOT has_valid AND has_expired)::int AS expired_only_employees,
+      COUNT(employee_id) FILTER (WHERE NOT has_valid AND NOT has_expired)::int AS never_certified_employees
+    FROM employee_course
+    GROUP BY area_id, area_name, course_id, course_code, course_title
+  )
+  SELECT aggregated.*, COUNT(*) OVER()::int AS total_rows
+  FROM aggregated
+  ORDER BY area_name ASC, course_code ASC
+  LIMIT $3 OFFSET $4
+`;
+
 @Injectable()
 export class ReportsService {
   constructor(
@@ -41,53 +89,7 @@ export class ReportsService {
   async complianceByArea(query: ComplianceReportQueryDto) {
     const asOf = query.asOf ? new Date(query.asOf) : this.clock.now();
     const rows = await this.dataSource.query<SummaryRow[]>(
-      `
-        WITH employee_course AS (
-          SELECT
-            area.id AS area_id,
-            area.name AS area_name,
-            course.id AS course_id,
-            course.code AS course_code,
-            course.title AS course_title,
-            employee.id AS employee_id,
-            COALESCE(certificate_state.has_valid, FALSE) AS has_valid,
-            COALESCE(certificate_state.has_expired, FALSE) AS has_expired
-          FROM areas area
-          CROSS JOIN courses course
-          LEFT JOIN employees employee
-            ON employee.area_id = area.id
-           AND employee.is_active = TRUE
-          LEFT JOIN LATERAL (
-            SELECT
-              BOOL_OR(certificate.expires_at > $1::timestamptz) AS has_valid,
-              BOOL_OR(certificate.expires_at <= $1::timestamptz) AS has_expired
-            FROM certificates certificate
-            WHERE certificate.employee_id = employee.id
-              AND certificate.course_id = course.id
-          ) certificate_state ON employee.id IS NOT NULL
-          WHERE area.is_active = TRUE
-            AND course.is_mandatory = TRUE
-            AND course.status = 'PUBLISHED'
-            AND ($2::uuid IS NULL OR course.id = $2::uuid)
-        ), aggregated AS (
-          SELECT
-            area_id,
-            area_name,
-            course_id,
-            course_code,
-            course_title,
-            COUNT(employee_id)::int AS applicable_active_employees,
-            COUNT(employee_id) FILTER (WHERE has_valid)::int AS valid_certificate_employees,
-            COUNT(employee_id) FILTER (WHERE NOT has_valid AND has_expired)::int AS expired_only_employees,
-            COUNT(employee_id) FILTER (WHERE NOT has_valid AND NOT has_expired)::int AS never_certified_employees
-          FROM employee_course
-          GROUP BY area_id, area_name, course_id, course_code, course_title
-        )
-        SELECT aggregated.*, COUNT(*) OVER()::int AS total_rows
-        FROM aggregated
-        ORDER BY area_name ASC, course_code ASC
-        LIMIT $3 OFFSET $4
-      `,
+      COMPLIANCE_SUMMARY_SQL,
       [
         asOf.toISOString(),
         query.courseId ?? null,

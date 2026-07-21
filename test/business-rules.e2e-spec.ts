@@ -47,6 +47,9 @@ describe('Mandatory business rules (e2e)', () => {
   let secondCourse: CourseEntity;
   let enrollment: EnrollmentEntity;
   let wrongOptionId: string;
+  let secondModuleId: string;
+  let secondQuestionId: string;
+  let secondCorrectOptionId: string;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -128,6 +131,40 @@ describe('Mandatory business rules (e2e)', () => {
       certificateValidityDays: 365,
       status: CourseStatus.PUBLISHED,
     });
+    const secondModule = await db.getRepository(CourseModuleEntity).save({
+      courseId: secondCourse.id,
+      title: 'Advanced required module',
+      description: null,
+      sequenceNumber: 1,
+      estimatedDurationMinutes: 30,
+      isRequired: true,
+    });
+    secondModuleId = secondModule.id;
+    const secondAssessment = await db.getRepository(AssessmentEntity).save({
+      courseId: secondCourse.id,
+      version: 1,
+      title: 'Advanced exam',
+      instructions: null,
+      passingScore: 70,
+      status: AssessmentStatus.PUBLISHED,
+      publishedAt: new Date(),
+    });
+    const secondQuestion = await db.getRepository(QuestionEntity).save({
+      assessmentId: secondAssessment.id,
+      prompt: 'Advanced correct?',
+      questionType: QuestionType.SINGLE_CHOICE,
+      points: 10,
+      sequenceNumber: 1,
+      isActive: true,
+    });
+    secondQuestionId = secondQuestion.id;
+    const secondCorrect = await db.getRepository(QuestionOptionEntity).save({
+      questionId: secondQuestion.id,
+      optionText: 'Yes',
+      isCorrect: true,
+      sequenceNumber: 1,
+    });
+    secondCorrectOptionId = secondCorrect.id;
     const module = await db.getRepository(CourseModuleEntity).save({
       courseId: course.id,
       title: 'Required',
@@ -293,6 +330,31 @@ describe('Mandatory business rules (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(201);
     expect(unlocked.body.learningPathEnrollmentId).toBe(assignment.body.id);
+
+    await request(app.getHttpServer())
+      .post(
+        `/api/v1/enrollments/${unlocked.body.id}/modules/${secondModuleId}/complete`,
+      )
+      .set('Authorization', `Bearer ${learnerToken}`)
+      .expect(201);
+    await request(app.getHttpServer())
+      .post(`/api/v1/enrollments/${unlocked.body.id}/assessment-attempts`)
+      .set('Authorization', `Bearer ${learnerToken}`)
+      .send({
+        answers: [
+          {
+            questionId: secondQuestionId,
+            selectedOptionIds: [secondCorrectOptionId],
+          },
+        ],
+      })
+      .expect(201)
+      .expect(({ body }) => expect(body.passed).toBe(true));
+    await request(app.getHttpServer())
+      .get(`/api/v1/learning-path-enrollments/${assignment.body.id}`)
+      .set('Authorization', `Bearer ${learnerToken}`)
+      .expect(200)
+      .expect(({ body }) => expect(body.status).toBe('COMPLETED'));
   });
 
   it('generates idempotent expiry alerts and distinguishes expired compliance', async () => {
