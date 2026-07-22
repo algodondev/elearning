@@ -1,5 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { compare } from 'bcrypt';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
@@ -43,6 +44,41 @@ describe('Development seed (integration)', () => {
         .send({ email, password: 'DevOnly123!' })
         .expect(201)
         .expect(({ body }) => expect(body.user.role).toBe(role));
+    }
+  });
+
+  it('uses a configured password for every seeded demonstration account', async () => {
+    const previousPassword = process.env.SEED_PASSWORD;
+    process.env.SEED_PASSWORD = 'DeploymentOnly456!';
+
+    try {
+      await seedDevelopmentDatabase(db);
+
+      const users = await db
+        .getRepository(UserEntity)
+        .createQueryBuilder('user')
+        .addSelect('user.passwordHash')
+        .getMany();
+      for (const user of users) {
+        await expect(
+          compare('DeploymentOnly456!', user.passwordHash),
+        ).resolves.toBe(true);
+        await expect(compare('DevOnly123!', user.passwordHash)).resolves.toBe(
+          false,
+        );
+      }
+
+      await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'admin@elearning.local',
+          password: 'DeploymentOnly456!',
+        })
+        .expect(201);
+    } finally {
+      if (previousPassword === undefined) delete process.env.SEED_PASSWORD;
+      else process.env.SEED_PASSWORD = previousPassword;
+      await seedDevelopmentDatabase(db);
     }
   });
 });

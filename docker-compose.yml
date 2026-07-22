@@ -15,6 +15,7 @@ services:
       DB_NAME: ${DB_NAME:-elearning}
       DB_USER: ${DB_USER:-elearning}
       DB_PASSWORD: ${DB_PASSWORD:-elearning_dev_password}
+      DB_SSL: ${DB_SSL:-false}
       DB_LOGGING: ${DB_LOGGING:-false}
       JWT_SECRET: ${JWT_SECRET:-docker-development-secret-change-before-production}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}

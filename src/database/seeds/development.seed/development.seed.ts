@@ -58,7 +58,10 @@ export async function seedDevelopmentDatabase(db: DataSource): Promise<void> {
     throw new Error('Development seed is disabled in production.');
   }
   const rounds = Number(process.env.BCRYPT_ROUNDS ?? 12);
-  const passwordHash = await hash('DevOnly123!', rounds);
+  const passwordHash = await hash(
+    process.env.SEED_PASSWORD ?? 'DevOnly123!',
+    rounds,
+  );
   const publishedAt = new Date('2026-07-20T12:00:00.000Z');
 
   await db.transaction(async (manager) => {
@@ -216,7 +219,7 @@ async function run(): Promise<void> {
     await dataSource.runMigrations();
     await seedDevelopmentDatabase(dataSource);
     process.stdout.write(
-      'Development seed complete. Password for all seeded users: DevOnly123!\n',
+      'Development seed complete. All seeded users use the configured SEED_PASSWORD.\n',
     );
   } finally {
     await dataSource.destroy();

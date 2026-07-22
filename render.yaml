@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: elearning-corporativo-esen
+    runtime: docker
+    plan: free
+    region: virginia
+    repo: https://github.com/algodondev/elearning
+    branch: main
+    autoDeployTrigger: checksPass
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: '3000'
+      - key: API_PREFIX
+        value: api/v1
+      - key: CORS_ORIGINS
+        value: https://elearning-corporativo-esen.onrender.com
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: '5432'
+      - key: DB_NAME
+        value: postgres
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSL
+        value: 'true'
+      - key: DB_SSL_CA
+        sync: false
+      - key: DB_LOGGING
+        value: 'false'
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: BCRYPT_ROUNDS
+        value: '12'
+      - key: THROTTLE_TTL_MS
+        value: '60000'
+      - key: THROTTLE_LIMIT
+        value: '100'
+      - key: ALERT_CRON
+        value: '0 0 2 * * *'

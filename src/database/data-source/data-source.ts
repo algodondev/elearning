@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import { DataSource } from 'typeorm';
 import { databaseEntities } from '../entities';
+import { resolveDatabaseSsl } from '../database-ssl';
 
 export default new DataSource({
   type: 'postgres',
@@ -13,4 +14,5 @@ export default new DataSource({
   migrations: [`${__dirname}/../migrations/*{.ts,.js}`],
   synchronize: false,
   logging: process.env.DB_LOGGING === 'true',
+  ssl: resolveDatabaseSsl(process.env.DB_SSL === 'true', process.env.DB_SSL_CA),
 });

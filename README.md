@@ -27,6 +27,8 @@ npm run start:dev
 
 The checked-in `.env.example` is safe to copy. The local `.env` is intentionally ignored by Git. Set `DB_PORT=5433` when running the API from the host, as shown in the example file.
 
+For the hosted academic environment, follow [the Render + Supabase deployment guide](docs/deployment-render-supabase.md). Provider tokens belong only in the ignored `.env.local`; never copy them into Git, documentation, or chat.
+
 ## Fully Dockerized API
 
 ```bash
@@ -63,6 +65,8 @@ The generated submission contract is [docs/api/openapi.json](docs/api/openapi.js
 | EMPLOYEE   | `learner@elearning.local` | `DevOnly123!`        |
 
 It also creates two areas/levels, an active learner, a complete mandatory published course and assessment, and a published learning path. These credentials are for local evaluation only.
+
+Set `SEED_PASSWORD` to replace the local default for a controlled remote demonstration initialization. Run the seed exactly once against a newly created empty database; never run it against data that must be preserved.
 
 ## Database workflow
 
@@ -168,6 +172,7 @@ The required route diagram and state explanation are in [docs/learning-path.md](
 | `CORS_ORIGINS`                      | Comma-separated allowlist              | localhost UI origins        |
 | `DB_HOST`, `DB_PORT`                | PostgreSQL connection                  | `localhost`, `5433`         |
 | `DB_NAME`, `DB_USER`, `DB_PASSWORD` | PostgreSQL database credentials        | local development values    |
+| `DB_SSL`, `DB_SSL_CA`               | Verified TLS for managed PostgreSQL    | `false`, unset locally      |
 | `JWT_SECRET`                        | JWT signing key, minimum 32 characters | replace outside development |
 | `JWT_EXPIRES_IN`                    | Access-token lifetime                  | `15m`                       |
 | `BCRYPT_ROUNDS`                     | Password hashing cost                  | `12`                        |
@@ -183,4 +188,5 @@ Configuration is validated at startup; missing database credentials or a short J
 - [Testing and acceptance](docs/testing.md)
 - [Compliance report performance](docs/report-performance.md)
 - [Rubric submission checklist](docs/submission-checklist.md)
+- [Render + Supabase deployment](docs/deployment-render-supabase.md)
 - [Postman collection](postman/corporate-elearning.postman_collection.json)

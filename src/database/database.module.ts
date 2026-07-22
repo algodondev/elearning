@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { databaseEntities } from './entities';
+import { resolveDatabaseSsl } from './database-ssl';
 
 @Module({
   imports: [
@@ -20,6 +21,10 @@ import { databaseEntities } from './entities';
         migrationsRun: true,
         synchronize: false,
         logging: config.get<boolean>('DB_LOGGING', false),
+        ssl: resolveDatabaseSsl(
+          config.get<boolean>('DB_SSL', false),
+          config.get<string>('DB_SSL_CA'),
+        ),
         retryAttempts: 10,
         retryDelay: 1000,
       }),
