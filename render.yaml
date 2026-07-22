@@ -17,6 +17,8 @@ services:
         value: '3000'
       - key: API_PREFIX
         value: api/v1
+      - key: SWAGGER_SERVER_URL
+        value: https://elearning-corporativo-esen.onrender.com
       - key: CORS_ORIGINS
         value: https://elearning-corporativo-esen.onrender.com
       - key: DB_HOST

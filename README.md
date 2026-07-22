@@ -169,6 +169,7 @@ The required route diagram and state explanation are in [docs/learning-path.md](
 | ----------------------------------- | -------------------------------------- | --------------------------- |
 | `PORT`                              | HTTP port                              | `3000`                      |
 | `API_PREFIX`                        | Versioned route prefix                 | `api/v1`                    |
+| `SWAGGER_SERVER_URL`                | Origin used by Swagger “Try it out”    | `http://localhost:3000`     |
 | `CORS_ORIGINS`                      | Comma-separated allowlist              | localhost UI origins        |
 | `DB_HOST`, `DB_PORT`                | PostgreSQL connection                  | `localhost`, `5433`         |
 | `DB_NAME`, `DB_USER`, `DB_PASSWORD` | PostgreSQL database credentials        | local development values    |

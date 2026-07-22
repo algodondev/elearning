@@ -9,7 +9,10 @@ async function generate(): Promise<void> {
   const app = await NestFactory.create(AppModule, { logger: false });
   const config = app.get(ConfigService);
   app.setGlobalPrefix(config.get<string>('API_PREFIX', 'api/v1'));
-  const document = buildOpenApiDocument(app);
+  const document = buildOpenApiDocument(
+    app,
+    config.get<string>('SWAGGER_SERVER_URL', 'http://localhost:3000'),
+  );
   const outputDirectory = resolve(process.cwd(), 'docs/api');
   const outputPath = resolve(outputDirectory, 'openapi.json');
   await mkdir(outputDirectory, { recursive: true });

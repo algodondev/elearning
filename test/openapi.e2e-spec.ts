@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApplication } from '../src/configure-application';
+import { buildOpenApiDocument } from '../src/swagger/openapi';
 
 interface OpenApiOperation {
   tags?: string[];
@@ -27,6 +28,7 @@ interface OpenApiOperation {
 
 interface OpenApiDocument {
   info: { title: string; version: string; description?: string };
+  servers?: Array<{ url: string; description?: string }>;
   paths: Record<string, Record<string, OpenApiOperation>>;
   components?: { schemas?: Record<string, unknown> };
 }
@@ -58,6 +60,20 @@ describe('OpenAPI contract (e2e)', () => {
     expect(document.info.description).toContain('RBAC');
     expect(document.info.description).toContain('UTC');
     expect(document.info.description).toContain('three');
+  });
+
+  it('uses the configured server origin for Swagger requests', () => {
+    const configured = buildOpenApiDocument(
+      app,
+      'https://elearning-corporativo-esen.onrender.com/',
+    );
+
+    expect(configured.servers).toEqual([
+      {
+        url: 'https://elearning-corporativo-esen.onrender.com',
+        description: 'Environment-configured API server',
+      },
+    ]);
   });
 
   it('documents every operation with identity, behavior, success schema, and protected errors', () => {

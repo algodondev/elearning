@@ -10055,7 +10055,7 @@
   "servers": [
     {
       "url": "http://localhost:3000",
-      "description": "Local Docker development"
+      "description": "Environment-configured API server"
     }
   ],
   "components": {

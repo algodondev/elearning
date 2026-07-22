@@ -49,6 +49,7 @@ type Operation = {
 };
 
 const UUID_EXAMPLE = '550e8400-e29b-41d4-a716-446655440000';
+const DEFAULT_OPENAPI_SERVER_URL = 'http://localhost:3000';
 
 const TAG_CONTEXT: Record<string, string> = {
   Auth: 'Credentials are never returned. JWT access is revalidated against the active user on every protected request.',
@@ -162,7 +163,14 @@ const noContentOperations = new Set([
   'removeLearningPathCourse',
 ]);
 
-export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
+export function resolveOpenApiServerUrl(serverUrl: string): string {
+  return serverUrl.replace(/\/+$/, '');
+}
+
+export function buildOpenApiDocument(
+  app: INestApplication,
+  serverUrl = DEFAULT_OPENAPI_SERVER_URL,
+): OpenAPIObject {
   const configuration = new DocumentBuilder()
     .setTitle('Corporate E-Learning API')
     .setDescription(
@@ -176,7 +184,10 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
       ].join('\n\n'),
     )
     .setVersion('1.0.0')
-    .addServer('http://localhost:3000', 'Local Docker development')
+    .addServer(
+      resolveOpenApiServerUrl(serverUrl),
+      'Environment-configured API server',
+    )
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'access-token',

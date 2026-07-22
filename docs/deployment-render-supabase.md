@@ -86,6 +86,7 @@ Con los secretos disponibles, el responsable técnico realizará:
 11. Verificar que existen las migraciones, tres usuarios, curso, evaluación y ruta.
 12. Crear el Web Service gratuito de Render desde el Dockerfile.
 13. Cargar credenciales PostgreSQL, CA y JWT en el almacén de variables de Render.
+    Configurar `SWAGGER_SERVER_URL` con el origen público HTTPS del servicio, sin `/api/v1`.
 14. Desplegar la imagen y esperar que el health check pase.
 15. Validar por HTTPS health, Swagger, OpenAPI, login y perfil de los tres roles.
 16. Reiniciar el servicio y confirmar persistencia de datos.

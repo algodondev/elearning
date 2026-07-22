@@ -30,7 +30,10 @@ export function configureApplication(app: INestApplication): void {
   app.useGlobalFilters(new ApiExceptionFilter());
   app.enableShutdownHooks();
 
-  const document = buildOpenApiDocument(app);
+  const document = buildOpenApiDocument(
+    app,
+    config.get<string>('SWAGGER_SERVER_URL', 'http://localhost:3000'),
+  );
   SwaggerModule.setup('api', app, document, {
     jsonDocumentUrl: 'api-json',
     swaggerOptions: { persistAuthorization: true },
