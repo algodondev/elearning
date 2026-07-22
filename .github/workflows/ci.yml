@@ -21,7 +21,7 @@ jobs:
       DB_LOGGING: 'false'
       JWT_SECRET: ci-only-elearning-jwt-secret-at-least-32-characters
       JWT_EXPIRES_IN: 15m
-      BCRYPT_ROUNDS: 4
+      BCRYPT_ROUNDS: 8
       THROTTLE_TTL_MS: 60000
       THROTTLE_LIMIT: 1000
       ALERT_CRON: 0 0 2 * * *
