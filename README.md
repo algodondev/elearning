@@ -14,12 +14,12 @@ The API implements JWT authentication, role/ownership authorization, DTO validat
 
 ## Quick start: API on the host, PostgreSQL in Docker
 
-Requirements: Node.js 24+, npm 11+, Docker Engine/Desktop, and Docker Compose.
+Requirements: Node.js 24+, npm 11+, Docker Engine/Desktop, and Docker Compose v2 with `--wait` support.
 
 ```bash
 cp .env.example .env
-docker compose up -d postgres
 npm ci
+docker compose up -d --wait postgres
 npm run migration:run
 npm run seed
 npm run start:dev
@@ -33,7 +33,7 @@ For the hosted academic environment, follow [the Render + Supabase deployment gu
 
 ```bash
 cp .env.example .env
-docker compose up -d --build
+docker compose up -d --build --wait
 docker compose run --rm -e NODE_ENV=development api \
   node dist/database/seeds/development.seed/development.seed.js
 docker compose ps
@@ -53,6 +53,18 @@ docker compose down
 - Health/readiness: `http://localhost:3000/api/v1/health`
 
 The generated submission contract is [docs/api/openapi.json](docs/api/openapi.json).
+
+### Deployed academic demo
+
+- **Public Swagger UI:** [https://elearning-corporativo-esen.onrender.com/api#/](https://elearning-corporativo-esen.onrender.com/api#/)
+- Health/readiness: [https://elearning-corporativo-esen.onrender.com/api/v1/health](https://elearning-corporativo-esen.onrender.com/api/v1/health)
+- OpenAPI JSON: [https://elearning-corporativo-esen.onrender.com/api-json](https://elearning-corporativo-esen.onrender.com/api-json)
+
+This is the shared deployed version of the academic MVP. Render runs the Dockerized NestJS API, while Supabase provides its persistent PostgreSQL database. The deployed `SWAGGER_SERVER_URL` points Swagger “Try it out” requests to the same Render HTTPS origin, so operations executed from this page call the hosted API rather than a local server.
+
+The link is a stable project reference for reviewers, presenters, and repository visitors; cloning the repository does not require changing it. A clone uses `http://localhost:3000` from `.env.example` for its own local Swagger requests. Because the hosted instance uses a shared database, successful write operations from Swagger affect the shared demonstration data.
+
+The service was verified healthy with its database available on July 22, 2026. Under [Render's current Free-instance behavior](https://render.com/docs/free#spinning-down-on-idle), the web service spins down after 15 minutes without inbound traffic and takes about one minute to start again; refresh Swagger after the health endpoint responds.
 
 ## Development seed
 
@@ -83,19 +95,42 @@ Never enable TypeORM schema synchronization. Create schema changes as migrations
 
 ## Tests and quality gates
 
-The E2E suites truncate application tables. Run them only against a disposable development/test database, then rerun `npm run seed` if you want the demo fixture restored.
+The E2E suites truncate application tables. Never run them against Supabase, production, or a database whose data must be preserved.
+
+Create or reset a separate local test database inside the PostgreSQL container:
+
+```bash
+docker compose up -d --wait postgres
+docker compose exec -T postgres sh -c \
+  'dropdb --if-exists --force -U "$POSTGRES_USER" elearning_test && createdb -U "$POSTGRES_USER" elearning_test'
+DB_NAME=elearning_test npm run migration:run
+```
+
+Run the complete automated local gate against that disposable database:
+
+```bash
+DB_NAME=elearning_test npm run openapi:generate
+DB_NAME=elearning_test npm run verify
+git diff --exit-code -- docs/api/openapi.json
+```
+
+`npm run verify` performs formatting, lint, compilation, unit tests, database-backed E2E tests, coverage enforcement, OpenAPI contract tests, and the dependency security audit. The generated-contract diff confirms that the committed OpenAPI artifact is current. Newman is a separate running-API acceptance test described below.
+
+To run or troubleshoot the gates individually:
 
 ```bash
 npm run format:check
 npm run lint:check
 npm run build
 npm test
-npm run test:e2e
-npm run test:cov
-npm run openapi:generate
-npm run openapi:test
+DB_NAME=elearning_test npm run test:e2e
+DB_NAME=elearning_test npm run test:cov
+DB_NAME=elearning_test npm run openapi:generate
+DB_NAME=elearning_test npm run openapi:test
 npm audit --audit-level=high
 ```
+
+After testing, `npm run seed` restores the local `elearning` development database; it does not modify `elearning_test` unless `DB_NAME=elearning_test` is explicitly supplied.
 
 See [docs/testing.md](docs/testing.md) for the test layers, business-case matrix, and acceptance sequence.
 
@@ -113,7 +148,7 @@ For Docker Newman:
 
 ```bash
 npm run seed
-docker compose up -d --build api
+docker compose up -d --build --wait api
 npm run postman:test
 ```
 
